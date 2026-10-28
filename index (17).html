@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dylemat więźnia — 10 rund</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#192b39;background:#f3f7fb}*{box-sizing:border-box}body{margin:0;padding:24px 12px}.wrap{max-width:820px;margin:auto}.top{display:flex;align-items:center;justify-content:space-between;gap:12px}h1{font-size:clamp(1.6rem,4vw,2.2rem);margin:10px 0}h2{font-size:1.15rem;margin-top:0}.muted{color:#607181}p{line-height:1.55}.card{background:white;border:1px solid #d9e2eb;border-radius:18px;padding:24px;margin:17px 0;box-shadow:0 4px 15px #233e5c0a}label{display:block;margin:10px 0;cursor:pointer}label.option{padding:14px 16px;border:1px solid #ccd8e2;border-radius:12px}label.option:has(input:checked){border-color:#2563eb;background:#eff6ff}.option small{display:block;color:#617181;margin:3px 0 0 25px}button{border:0;background:#1d4ed8;color:white;border-radius:11px;padding:13px 20px;font-weight:700;font-size:1rem;cursor:pointer}button:hover{background:#1e40af}button:focus-visible,input:focus-visible{outline:3px solid #91bbff;outline-offset:2px}button.secondary{background:#e7edf5;color:#1d3447}button.secondary:hover{background:#d7e2ee}button:disabled{opacity:.5;cursor:default}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}.scores{display:grid;grid-template-columns:1fr 1fr;gap:12px}.score{border-radius:14px;background:#eaf2fe;padding:18px;text-align:center}.score strong{font-size:2.2rem;display:block}.status{background:#f1f5fa;padding:13px 16px;border-radius:10px;margin:15px 0}table{border-collapse:collapse;width:100%;font-size:.92rem}th,td{border-bottom:1px solid #e4ebf1;text-align:left;padding:9px 7px}th{background:#f3f7fb}.table-scroll{overflow:auto}.choice{flex:1;min-width:190px;padding:18px;font-size:1.1rem}.choice.coop{background:#087f60}.choice.coop:hover{background:#07694f}.choice.defect{background:#a63836}.choice.defect:hover{background:#8c2826}.round{font-weight:700;color:#1d4ed8}.hidden{display:none!important}.notice{font-size:.88rem;color:#526576}footer{margin:24px 0;color:#5b6e80;font-size:.85rem}
+</style>
+</head>
+<body><main class="wrap">
+<div class="top"><div><div class="muted">Interaktywna gra decyzyjna</div><h1>Dylemat więźnia</h1></div><span aria-label="10 rund">10 rund</span></div>
+<section class="card" id="setup">
+<h2>1. Wybierz strategię komputera</h2><p>Grasz przeciwko komputerowi. W każdej rundzie oboje wybieracie niezależnie <b>współpracę</b> lub <b>zdradę</b>. Nie zobaczysz decyzji komputera, dopóki nie podejmiesz swojej.</p>
+<label class="option"><input type="radio" name="strategy" value="cooperative" checked> <b>Raczej kooperacyjna</b><small>Komputer współpracuje z prawdopodobieństwem 80% w każdej rundzie.</small></label>
+<label class="option"><input type="radio" name="strategy" value="competitive"> <b>Raczej rywalizacyjna</b><small>Komputer zdradza z prawdopodobieństwem 80% w każdej rundzie.</small></label>
+<label class="option"><input type="radio" name="strategy" value="random"> <b>Losowa</b><small>Komputer współpracuje lub zdradza z jednakowym prawdopodobieństwem (50/50).</small></label>
+<p class="notice">W tej wersji komputer nie uczy się na podstawie Twoich poprzednich decyzji.</p>
+<h2>Punktacja</h2>
+<div class="table-scroll"><table aria-label="Macierz wypłat"><thead><tr><th>Twój wybór</th><th>Komputer współpracuje</th><th>Komputer zdradza</th></tr></thead><tbody><tr><td>Współpraca</td><td>Ty 3 / komputer 3</td><td>Ty 0 / komputer 5</td></tr><tr><td>Zdrada</td><td>Ty 5 / komputer 0</td><td>Ty 1 / komputer 1</td></tr></tbody></table></div>
+<div class="actions"><button id="start">Rozpocznij grę</button></div>
+</section>
+<section class="card hidden" id="game" aria-live="polite">
+<div class="round" id="roundLabel">Runda 1 z 10</div><h2>Co wybierasz?</h2><p>Decyzja komputera zostanie pokazana po Twoim wyborze.</p>
+<div class="scores"><div class="score">Twoje punkty<strong id="userScore">0</strong></div><div class="score">Punkty komputera<strong id="cpuScore">0</strong></div></div>
+<div class="actions" id="choices"><button class="choice coop" id="cooperate">Współpraca</button><button class="choice defect" id="defect">Zdrada</button></div>
+<div id="result" class="hidden"><div class="status" id="lastResult"></div><button id="next">Następna runda</button></div>
+</section>
+<section class="card hidden" id="finish" aria-live="polite"><h2>Gra zakończona!</h2><p id="finalText"></p><div class="actions"><button id="download">Pobierz wyniki CSV</button><button class="secondary" id="again">Zagraj ponownie</button></div></section>
+<section class="card hidden" id="historySection"><h2>Historia rund</h2><div class="table-scroll"><table><thead><tr><th>Runda</th><th>Twój wybór</th><th>Komputer</th><th>Twoje pkt</th><th>Pkt komputera</th></tr></thead><tbody id="history"></tbody></table></div></section>
+<footer>Gra działa lokalnie w przeglądarce i na GitHub Pages. Nie gromadzi wyników na serwerze.</footer>
+</main><script>
+'use strict';
+const $=id=>document.getElementById(id), N=10;
+const labels={C:'Współpraca',D:'Zdrada'};
+const matrix={CC:[3,3],CD:[0,5],DC:[5,0],DD:[1,1]};
+let strategy='cooperative',history=[],userTotal=0,cpuTotal=0,waiting=false;
+function setVisible(id,visible){$(id).classList.toggle('hidden',!visible)}
+function computerChoice(){const p=strategy==='cooperative'?.8:strategy==='competitive'?.2:.5;return Math.random()<p?'C':'D'}
+function renderHistory(){const body=$('history');body.replaceChildren();for(const r of history){const tr=document.createElement('tr');for(const v of [r.round,labels[r.user],labels[r.computer],r.userPoints,r.computerPoints]){const td=document.createElement('td');td.textContent=String(v);tr.append(td)}body.append(tr)}}
+function newRound(){waiting=false;$('roundLabel').textContent=`Runda ${history.length+1} z ${N}`;setVisible('choices',true);setVisible('result',false)}
+function startGame(){strategy=document.querySelector('input[name="strategy"]:checked').value;history=[];userTotal=0;cpuTotal=0;$('userScore').textContent='0';$('cpuScore').textContent='0';renderHistory();setVisible('setup',false);setVisible('game',true);setVisible('finish',false);setVisible('historySection',true);newRound()}
+function decide(user){if(waiting||history.length>=N)return;waiting=true;const computer=computerChoice();const [up,cp]=matrix[user+computer];userTotal+=up;cpuTotal+=cp;history.push({round:history.length+1,user,computer,userPoints:up,computerPoints:cp,userTotal,computerTotal:cpuTotal,strategy});$('userScore').textContent=userTotal;$('cpuScore').textContent=cpuTotal;$('lastResult').textContent=`Ty: ${labels[user]} (${up} pkt). Komputer: ${labels[computer]} (${cp} pkt).`;renderHistory();setVisible('choices',false);setVisible('result',true);$('next').textContent=history.length===N?'Zobacz podsumowanie':'Następna runda'}
+function next(){if(!waiting)return;if(history.length===N){setVisible('game',false);setVisible('finish',true);const summary=userTotal>cpuTotal?'Masz więcej punktów.':userTotal<cpuTotal?'Komputer ma więcej punktów.':'Remis.';$('finalText').textContent=`Po 10 rundach: Ty ${userTotal} pkt, komputer ${cpuTotal} pkt. ${summary}`}else newRound()}
+function downloadCsv(){const heads=['runda','strategia_komputera','wybor_uczestnika','wybor_komputera','punkty_uczestnika','punkty_komputera','suma_uczestnika','suma_komputera'];const rows=history.map(r=>[r.round,r.strategy,r.user,r.computer,r.userPoints,r.computerPoints,r.userTotal,r.computerTotal]);const csv='\uFEFF'+[heads,...rows].map(row=>row.join(';')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const link=document.createElement('a');const url=URL.createObjectURL(blob);link.href=url;link.download='dylemat-wieznia-wyniki.csv';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+$('start').addEventListener('click',startGame);$('cooperate').addEventListener('click',()=>decide('C'));$('defect').addEventListener('click',()=>decide('D'));$('next').addEventListener('click',next);$('download').addEventListener('click',downloadCsv);$('again').addEventListener('click',()=>{setVisible('setup',true);setVisible('game',false);setVisible('finish',false);setVisible('historySection',false);window.scrollTo({top:0,behavior:'smooth'})});
+</script></body></html>
